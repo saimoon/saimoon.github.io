@@ -1,0 +1,8 @@
+excerpt_separator: ""
+pygments: true
+markdown: kramdown
+url: http://saimoon.github.io
+title: Saimoon
+tagline: Repos of ideas
+description: A sort of Tek Blog by Simone Rotondo
+paginate: 5
