@@ -54,6 +54,37 @@ netif_napi_add(dev, &tp->napi,rtl8169_poll,R8169_NAPI_WEIGHT);
 
 this func initializes a core struct of NAPI system:<br>
  `struct napi_struct` (`tp->napi`);<br>
+
+Here I show the struct:
+
+{% highlight c %}
+struct napi_struct {
+	/* The poll_list must only be managed by the entity which
+	 * changes the state of the NAPI_STATE_SCHED bit.  This means
+	 * whoever atomically sets that bit can add this napi_struct
+	 * to the per-CPU poll_list, and whoever clears that bit
+	 * can remove from the list right before clearing the bit.
+	 */
+	struct list_head	poll_list;
+
+	unsigned long		state;
+	int			weight;
+	unsigned int		gro_count;
+	int			(*poll)(struct napi_struct *, int);
+#ifdef CONFIG_NETPOLL
+	spinlock_t		poll_lock;
+	int			poll_owner;
+#endif
+	struct net_device	*dev;
+	struct sk_buff		*gro_list;
+	struct sk_buff		*skb;
+	struct hrtimer		timer;
+	struct list_head	dev_list;
+	struct hlist_node	napi_hash_node;
+	unsigned int		napi_id;
+};
+{% endhighlight %}
+
 this struct contains device specific parameters, fundamental afterwards to consume packet:<br>
 there is an instance of `struct napi_struct` for each device ring queue (and so one for each interrupt),
 and each instance contains a *poll* function (`rtl8169_poll`) that will be responsible to process
@@ -104,6 +135,11 @@ Now, when the device is activated (using *ifconfig dev up*), the `.ndo_open` cal
 The `.ndo_open` callback function is interesting:
 
 * Create Rx ring buffer
+
+The Rx ring buffer is the queue that store network packets received from wire.
+They are written directly from NIC using DMA.
+If packets from network arrives faster than they are processed, the queue will be filled,
+and when full, new packets will be dropped.
 
 {% highlight c %}
 #define NUM_RX_DESC	256U  /* Number of Rx descriptor registers */
@@ -178,3 +214,73 @@ So after this init we have:
 |-----------------| |--------------| |-------------|
 | slot 255: |--- PhyAddr --> | 16383 byte | <-- VirtAddr ---| array 255 |
 |-----------------| |--------------| |-------------|
+
+
+* Register interrupt handler
+
+The `request_irq()` function register the irq handler `rtl8169_interrupt` using the irq number obtained earlier from the system.
+If MSI interrupts are available they are used, failing back to legacy one if not availables (IRQF_SHARED).
+MSI interrupts are better, specially in multi ring queue device,
+where each ring queue can have its own IRQ assigned and can be handled by a specific cpu (using irqbalance or smp_affinity).<br>
+Here the code for interrupt handler registration:
+
+{% highlight c %}
+static int rtl_open(struct net_device *dev)
+{
+...
+  retval = request_irq(pdev->irq, rtl8169_interrupt,
+			(tp->features & RTL_FEATURE_MSI) ? 0 : IRQF_SHARED,
+			dev->name, dev);
+...
+}
+{% endhighlight %}
+
+
+* Enable NAPI
+
+Enable NAPI subsystem: it simply clear a bit in the `state` member of `struct napi_struct`.
+
+{% highlight c %}
+static int rtl_open(struct net_device *dev)
+{
+...
+  napi_enable(&tp->napi);
+...
+}
+{% endhighlight %}
+
+
+* Enable interrupts
+
+Finally enable interrupts on the device.
+From now incoming packets start to be received.
+Here the code:
+
+{% highlight c %}
+static int rtl_open(struct net_device *dev)
+{
+...
+  rtl_hw_start(dev);
+...
+}
+
+static void rtl_hw_start(struct net_device *dev)
+{
+...
+	rtl_irq_enable_all(tp);
+}
+{% endhighlight %}
+
+
+* Start NAPI queue
+
+This code starts the NAPI queue:
+
+{% highlight c %}
+static int rtl_open(struct net_device *dev)
+{
+...
+  netif_start_queue(dev);
+...
+}
+{% endhighlight %}
