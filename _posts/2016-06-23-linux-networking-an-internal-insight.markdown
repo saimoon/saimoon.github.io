@@ -172,10 +172,10 @@ So after this init we have:
 
 | RxDescArray | | | | Rx_databuff|
 |-----------------| |--------------| |-------------|
-| slot 0:  addr |---PhyAddr-> | 16383 byte | <--VirtAddr--| array 0   |
+| slot 0:   |--- PhyAddr --> | 16383 byte | <-- VirtAddr ---| array 0   |
 |-----------------| |--------------| |-------------|
-| slot 1:  addr |---PhyAddr-> | 16383 byte | <--VirtAddr--| array 1   |
+| slot 1:   |--- PhyAddr --> | 16383 byte | <-- VirtAddr ---| array 1   |
 |-----------------| |--------------| |-------------|
 |-----------------| |--------------| |-------------|
-| slot 255:addr |---PhyAddr-> | 16383 byte | <--VirtAddr--| array 255 |
+| slot 255: |--- PhyAddr --> | 16383 byte | <-- VirtAddr ---| array 255 |
 |-----------------| |--------------| |-------------|
