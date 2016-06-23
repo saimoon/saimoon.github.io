@@ -15,23 +15,24 @@ Docs from the net will help alot, and I'll reporting refs at the end of post.
 ## Look @ source
 
 In this post I'll use as sample the net card:
-* realtek rtl8169 (drivers/net/ethernet/realtek/r8169.c)
 
-Look at the *new module_pci_driver()* macro that wraps module_init and module_exit calls, in *drivers/net/ethernet/realtek/r8169.c*:
+* **realtek rtl8169** (in *drivers/net/ethernet/realtek/r8169.c*)
+
+Look at the *new module_pci_driver()* macro that wraps *module_init()* and *module_exit()* calls, in *drivers/net/ethernet/realtek/r8169.c*:
+
 {% highlight c %}
 module_pci_driver(rtl8169_pci_driver);
 {% endhighlight %}
 
-The *rtl8169_pci_driver* defines functions used by kernel to init/destroy the pci device.
+The *rtl8169_pci_driver* struct defines functions used by kernel to init/destroy the pci device.
 
 {% highlight c %}
 static struct pci_driver rtl8169_pci_driver = {
-	.name		= MODULENAME,
-	.id_table	= rtl8169_pci_tbl,
+...
 	.probe		= rtl_init_one,
 	.remove		= rtl_remove_one,
 	.shutdown	= rtl_shutdown,
-	.driver.pm	= RTL8169_PM_OPS,
+...
 };
 {% endhighlight %}
 
