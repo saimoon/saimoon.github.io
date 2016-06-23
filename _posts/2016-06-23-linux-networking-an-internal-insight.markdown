@@ -166,8 +166,7 @@ static struct sk_buff *rtl8169_alloc_rx_data(struct rtl8169_private *tp, struct 
 So after this init we have:
 
 * 256 network packet buffer (each 16383 byte)
-* an Rx ring buffer (*RxDescArray*) with 256 slot
-		each slot point to the physic address of a packet buffer
+* an Rx ring buffer (*RxDescArray*) with 256 slot, each slot pointing to the physic address of a packet buffer
 * an array of 256 pointer to packet buffer (virtual address)
 
 | RxDescArray | | | | Rx_databuff|
