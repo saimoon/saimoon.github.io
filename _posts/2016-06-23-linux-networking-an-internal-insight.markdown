@@ -11,6 +11,7 @@ Docs from the net will help alot, and I'll reporting refs at the end of post.
 
 ## NAPI theory
 
+[todo]
 
 ## Look @ source
 
@@ -18,13 +19,13 @@ In this post I'll use as sample the net card:
 
 * **realtek rtl8169** (in *drivers/net/ethernet/realtek/r8169.c*)
 
-Look at the *new module_pci_driver()* macro that wraps *module_init()* and *module_exit()* calls, in *drivers/net/ethernet/realtek/r8169.c*:
+Look at the `new module_pci_driver()` macro that wraps `module_init()` and `module_exit()` calls, in `drivers/net/ethernet/realtek/r8169.c`:
 
 {% highlight c %}
 module_pci_driver(rtl8169_pci_driver);
 {% endhighlight %}
 
-The *rtl8169_pci_driver* struct defines functions used by kernel to init/destroy the pci device.
+The `rtl8169_pci_driver` struct defines functions used by kernel to init/destroy the pci device:
 
 {% highlight c %}
 static struct pci_driver rtl8169_pci_driver = {
@@ -36,7 +37,7 @@ static struct pci_driver rtl8169_pci_driver = {
 };
 {% endhighlight %}
 
-We are interested in *.probe* function, used by kernel to initialize the device.
+We are interested in `.probe` function, used by kernel to initialize the device.<br>
 For RTL, the *.probe* function is *rtl_init_one*.
 This func make alot of work to initialize the device.
 It's interesting to evidence the function *netif_napi_add*:
