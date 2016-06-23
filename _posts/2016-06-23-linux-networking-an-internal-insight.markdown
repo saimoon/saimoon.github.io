@@ -125,11 +125,10 @@ struct rtl8169_private {
 static int rtl_open(struct net_device *dev)
 {
 ...
-  // alloc 256 x 16byte rx desc (==> 256 x rx desc slot) = Rx-Descriptor ring-buffer
-  tp->RxDescArray = dma_alloc_coherent(&pdev->dev, 
-                                         R8169_RX_RING_BYTES, &tp->RxPhyAddr, GFP_KERNEL);
+  // alloc 256 x 16byte rx desc  ==> Rx-Descriptor ring-buffer
+  tp->RxDescArray = dma_alloc_coherent(&pdev->dev, R8169_RX_RING_BYTES, &tp->RxPhyAddr, GFP_KERNEL);
 
-  retval = rtl8169_init_ring(dev);   // which call rtl8169_rx_fill()
+  retval = rtl8169_init_ring(dev);  // it calls rtl8169_rx_fill()
 ...
 }
 
@@ -165,18 +164,18 @@ static struct sk_buff *rtl8169_alloc_rx_data(struct rtl8169_private *tp, struct 
 {% endhighlight %}
 
 So after this init we have:
-- 256 network packet buffer (each 16383 byte)
-- an Rx ring buffer (*RxDescArray*) with 256 slot
-		each slot point to the physic address of a packet buffer
-- an array of 256 pointer to packet buffer (virtual address)
 
-  RxDescArray                                              Rx_databuff
------------------             --------------              -------------
+* 256 network packet buffer (each 16383 byte)
+* an Rx ring buffer (*RxDescArray*) with 256 slot
+		each slot point to the physic address of a packet buffer
+* an array of 256 pointer to packet buffer (virtual address)
+
+| RxDescArray | | | | Rx_databuff|
+|-----------------| |--------------| |-------------|
 | slot 0:  addr |---PhyAddr-> | 16383 byte | <--VirtAddr--| array 0   |
------------------             --------------              -------------
+|-----------------| |--------------| |-------------|
 | slot 1:  addr |---PhyAddr-> | 16383 byte | <--VirtAddr--| array 1   |
------------------             --------------              -------------
-.......................................................................
------------------             --------------              -------------
+|-----------------| |--------------| |-------------|
+|-----------------| |--------------| |-------------|
 | slot 255:addr |---PhyAddr-> | 16383 byte | <--VirtAddr--| array 255 |
------------------             --------------              -------------
+|-----------------| |--------------| |-------------|
