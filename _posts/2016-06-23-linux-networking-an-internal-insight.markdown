@@ -97,7 +97,7 @@ dev->netdev_ops = &rtl_netdev_ops;
 rc = register_netdev(dev);
 {% endhighlight %}
 
-Now, when the device is activated (using *ifconfig dev up*), the `.ndo_open` callback (`rtl_open`) is called.
+Now, when the device is activated (using *ifconfig dev up*), the `.ndo_open` callback (`rtl_open()`) is called.
 
 ### rtl_open()
 
@@ -106,19 +106,19 @@ The `.ndo_open` callback function is interesting:
 * Create Rx ring buffer
 
 {% highlight c %}
-#define NUM_RX_DESC	256U						/* Number of Rx descriptor registers */
+#define NUM_RX_DESC	256U  /* Number of Rx descriptor registers */
 #define R8169_RX_RING_BYTES	(NUM_RX_DESC * sizeof(struct RxDesc))
 
 struct RxDesc {
-	__le32 opts1;		// 4-byte
-	__le32 opts2;		// 4-byte
-	__le64 addr;		// 8-byte (contains network packet buffer address)
+	__le32 opts1;   // 4-byte
+	__le32 opts2;  // 4-byte
+	__le64 addr;    // 8-byte (contains network packet buffer address)
 };
 
 struct rtl8169_private {
-	struct RxDesc *RxDescArray;				/* 256-aligned Rx descriptor ring */
+	struct RxDesc *RxDescArray;  /* 256-aligned Rx descriptor ring */
 	dma_addr_t RxPhyAddr;
-	void *Rx_databuff[NUM_RX_DESC];		/* Rx data buffers */
+	void *Rx_databuff[NUM_RX_DESC];  /* Rx data buffers */
 	...
 }
 
@@ -126,9 +126,10 @@ static int rtl_open(struct net_device *dev)
 {
 ...
 	// alloc 256 x 16byte rx desc (==> 256 x rx desc slot) = Rx-Descriptor ring-buffer
-	tp->RxDescArray = dma_alloc_coherent(&pdev->dev, R8169_RX_RING_BYTES, &tp->RxPhyAddr, GFP_KERNEL);
+	tp->RxDescArray = dma_alloc_coherent(&pdev->dev, 
+                                         R8169_RX_RING_BYTES, &tp->RxPhyAddr, GFP_KERNEL);
 
-	retval = rtl8169_init_ring(dev); // which call rtl8169_rx_fill()
+	retval = rtl8169_init_ring(dev);   // which call rtl8169_rx_fill()
 ...
 }
 
