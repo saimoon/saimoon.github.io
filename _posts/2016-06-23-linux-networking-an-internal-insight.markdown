@@ -97,7 +97,7 @@ dev->netdev_ops = &rtl_netdev_ops;
 rc = register_netdev(dev);
 {% endhighlight %}
 
-Now, when the device is activated (using *ifconfig <dev> up*), the `.ndo_open` callback (`rtl_open`) is called.
+Now, when the device is activated (using *ifconfig dev up*), the `.ndo_open` callback (`rtl_open`) is called.
 
 ### rtl_open()
 
