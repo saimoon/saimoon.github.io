@@ -17,7 +17,7 @@ Docs from the net will help alot, and I'll reporting refs at the end of post.
 
 In this post I'll use as sample the net card:
 
-* **realtek rtl8169** (in *drivers/net/ethernet/realtek/r8169.c*)
+* **Realtek rtl8169** (in `drivers/net/ethernet/realtek/r8169.c`)
 
 Look at the `new module_pci_driver()` macro that wraps `module_init()` and `module_exit()` calls, in `drivers/net/ethernet/realtek/r8169.c`:
 
@@ -37,10 +37,10 @@ static struct pci_driver rtl8169_pci_driver = {
 };
 {% endhighlight %}
 
-We are interested in `.probe` function, used by kernel to initialize the device.<br>
-For RTL, the *.probe* function is *rtl_init_one*.
-This func make alot of work to initialize the device.
-It's interesting to evidence the function *netif_napi_add*:
+I'm interested in `.probe` function, used by kernel to initialize the device.<br>
+For realtek, the `.probe` function is `rtl_init_one()`.<br>
+This func make alot of work to initialize the device.<br>
+Let start evidencing the function `netif_napi_add()`:
 
 {% highlight c %}
 static int rtl_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
@@ -50,15 +50,14 @@ netif_napi_add(dev, &tp->napi, rtl8169_poll, R8169_NAPI_WEIGHT);
 ...
 {% endhighlight %}
 
-here it is initialized a core struct of NAPI system: *struct napi_struct* (*tp->napi*);
-this struct contains device specific parameters, fundamental afterwards to consume packet;
-there is an instance of *struct napi_struct* for each device ring queue (and so one for each irq),
-and each instance contains a *poll* function (*rtl8169_poll*) that will be responsible to process
-incoming packets.
-*netif_napi_add()* register *poll* function inside the *struct napi_struct* linking also a weight (more about it soon).
+this func initializes a core struct of NAPI system: `struct napi_struct` (`tp->napi`);<br>
+this struct contains device specific parameters, fundamental afterwards to consume packet;<br>
+there is an instance of `struct napi_struct` for each device ring queue (and so one for each interrupt),
+and each instance contains a *poll* function (`rtl8169_poll`) that will be responsible to process
+incoming packets.<br>
+`netif_napi_add()` register *poll* function inside the `struct napi_struct` linking also a *weight* (more about it soon).
 
-Always in our previous *.probe* function, *struct net_device* is initialized,
-and all device operation *struct net_device_ops* are registered:
+Continuing in analysis of `rtl_init_one()`, I find the `struct net_device_ops`:
 
 {% highlight c %}
 static const struct net_device_ops rtl_netdev_ops = {
@@ -78,7 +77,12 @@ static const struct net_device_ops rtl_netdev_ops = {
 	.ndo_poll_controller	= rtl8169_netpoll,
 #endif
 };
-...
+{% endhighlight %}
+
+This struct contains device operations, callback functions called after some action on the device (like setup, change mac, etc...)
+In `rtl_init_one` it is initialized and all device operations registered:
+
+{% highlight c %}
 static int rtl_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 ...
@@ -90,9 +94,9 @@ dev->netdev_ops = &rtl_netdev_ops;
 rc = register_netdev(dev);
 {% endhighlight %}
 
+Now, when the device is activated (using *ifconfig <dev> up*), the `.ndo_open` callback (`rtl_open`) is called.
 
-Now, when the device is activated (*ifconfig <dev> up*), the *.ndo_open* callback (*rtl_open*) is called.
-The *.ndo_open* callback function do the following:
+The `.ndo_open` callback function is interesting, it does many actions:
 
 * Create Rx ring buffer
 
