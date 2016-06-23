@@ -46,7 +46,7 @@ Let start evidencing the function `netif_napi_add()`:
 static int rtl_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 ...
-netif_napi_add(dev, &tp->napi, rtl8169_poll, R8169_NAPI_WEIGHT);
+netif_napi_add(dev, &tp->napi,rtl8169_poll,R8169_NAPI_WEIGHT);
 ...
 {% endhighlight %}
 
