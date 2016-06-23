@@ -39,7 +39,9 @@ static struct pci_driver rtl8169_pci_driver = {
 
 I'm interested in `.probe` function, used by kernel to initialize the device.<br>
 For realtek, the `.probe` function is `rtl_init_one()`.<br>
-This func make alot of work to initialize the device.<br>
+
+### rtl_init_one()
+This function make most of the work of device initialization.<br>
 Let start evidencing the function `netif_napi_add()`:
 
 {% highlight c %}
@@ -50,12 +52,13 @@ netif_napi_add(dev, &tp->napi,rtl8169_poll,R8169_NAPI_WEIGHT);
 ...
 {% endhighlight %}
 
-this func initializes a core struct of NAPI system: `struct napi_struct` (`tp->napi`);<br>
-this struct contains device specific parameters, fundamental afterwards to consume packet;<br>
+this func initializes a core struct of NAPI system:<br>
+ `struct napi_struct` (`tp->napi`);<br>
+this struct contains device specific parameters, fundamental afterwards to consume packet:<br>
 there is an instance of `struct napi_struct` for each device ring queue (and so one for each interrupt),
 and each instance contains a *poll* function (`rtl8169_poll`) that will be responsible to process
 incoming packets.<br>
-`netif_napi_add()` register *poll* function inside the `struct napi_struct` linking also a *weight* (more about it soon).
+`netif_napi_add()` register a *poll* function inside the `struct napi_struct` and a *weight* value (more about it soon).
 
 Continuing in analysis of `rtl_init_one()`, I find the `struct net_device_ops`:
 
@@ -79,7 +82,7 @@ static const struct net_device_ops rtl_netdev_ops = {
 };
 {% endhighlight %}
 
-This struct contains device operations, callback functions called after some action on the device (like setup, change mac, etc...)
+This struct contains device operations, callback functions called after some action on the device (like setup, change mac, etc...).<br>
 In `rtl_init_one` it is initialized and all device operations registered:
 
 {% highlight c %}
@@ -96,7 +99,9 @@ rc = register_netdev(dev);
 
 Now, when the device is activated (using *ifconfig <dev> up*), the `.ndo_open` callback (`rtl_open`) is called.
 
-The `.ndo_open` callback function is interesting, it does many actions:
+### rtl_open()
+
+The `.ndo_open` callback function is interesting:
 
 * Create Rx ring buffer
 
