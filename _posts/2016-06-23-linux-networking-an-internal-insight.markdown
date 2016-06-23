@@ -110,55 +110,57 @@ The `.ndo_open` callback function is interesting:
 #define R8169_RX_RING_BYTES	(NUM_RX_DESC * sizeof(struct RxDesc))
 
 struct RxDesc {
-	__le32 opts1;   // 4-byte
-	__le32 opts2;  // 4-byte
-	__le64 addr;    // 8-byte (contains network packet buffer address)
+  __le32 opts1;   // 4-byte
+  __le32 opts2;   // 4-byte
+  __le64 addr;    // 8-byte (contains network packet buffer address)
 };
 
 struct rtl8169_private {
-	struct RxDesc *RxDescArray;  /* 256-aligned Rx descriptor ring */
-	dma_addr_t RxPhyAddr;
-	void *Rx_databuff[NUM_RX_DESC];  /* Rx data buffers */
-	...
+  struct RxDesc *RxDescArray;  /* 256-aligned Rx descriptor ring */
+  dma_addr_t RxPhyAddr;
+  void *Rx_databuff[NUM_RX_DESC];  /* Rx data buffers */
+...
 }
 
 static int rtl_open(struct net_device *dev)
 {
 ...
-	// alloc 256 x 16byte rx desc (==> 256 x rx desc slot) = Rx-Descriptor ring-buffer
-	tp->RxDescArray = dma_alloc_coherent(&pdev->dev, 
+  // alloc 256 x 16byte rx desc (==> 256 x rx desc slot) = Rx-Descriptor ring-buffer
+  tp->RxDescArray = dma_alloc_coherent(&pdev->dev, 
                                          R8169_RX_RING_BYTES, &tp->RxPhyAddr, GFP_KERNEL);
 
-	retval = rtl8169_init_ring(dev);   // which call rtl8169_rx_fill()
+  retval = rtl8169_init_ring(dev);   // which call rtl8169_rx_fill()
 ...
 }
 
 static int rtl8169_rx_fill(struct rtl8169_private *tp)
 {
-	for (i = 0; i < NUM_RX_DESC; i++) {
-	...
-		data = rtl8169_alloc_rx_data(tp, tp->RxDescArray + i);
+  for (i = 0; i < NUM_RX_DESC; i++) {
 ...
-		// save packet buffer address
-		tp->Rx_databuff[i] = data;
+    data = rtl8169_alloc_rx_data(tp, tp->RxDescArray + i);
+...
+    // save packet buffer address
+    tp->Rx_databuff[i] = data;
+  }
+...
 }
 
 static int rx_buf_sz = 16383;
 static struct sk_buff *rtl8169_alloc_rx_data(struct rtl8169_private *tp, struct RxDesc *desc)
 {
-	void *data;
-	dma_addr_t mapping;
+  void *data;
+  dma_addr_t mapping;
 ...
-	// create network packet buffer
-	data = kmalloc_node(rx_buf_sz, GFP_KERNEL, node);
+  // create network packet buffer
+  data = kmalloc_node(rx_buf_sz, GFP_KERNEL, node);
 ...
-	// get packet buffer physic addr for driver DMA access
-	mapping = dma_map_single(d, rtl8169_align(data), rx_buf_sz, DMA_FROM_DEVICE);
+  // get packet buffer physic addr for driver DMA access
+  mapping = dma_map_single(d, rtl8169_align(data), rx_buf_sz, DMA_FROM_DEVICE);
 ...
-	// save packet buffer to Rx-Descriptor slot (done calling rtl8169_map_to_asic())
-	desc->addr = cpu_to_le64(mapping);
+  // save packet buffer to Rx-Descriptor slot (done calling rtl8169_map_to_asic())
+  desc->addr = cpu_to_le64(mapping);
 ...
-	return data;
+  return data;
 }
 {% endhighlight %}
 
