@@ -89,7 +89,8 @@ this struct contains device specific parameters, fundamental afterwards to consu
 there is an instance of `struct napi_struct` for each device ring queue (and so one for each interrupt),
 and each instance contains a *poll* function (`rtl8169_poll`) that will be responsible to process
 incoming packets.<br>
-`netif_napi_add()` register a *poll* function inside the `struct napi_struct` and a *weight* value (more about it soon).
+`netif_napi_add()` register a *poll* function inside the `struct napi_struct`, initialize
+the `poll_list` and a *weight* value (remember those stuffs, we'll be important later).
 
 Continuing in analysis of `rtl_init_one()`, I find the `struct net_device_ops`:
 
@@ -284,3 +285,55 @@ static int rtl_open(struct net_device *dev)
 ...
 }
 {% endhighlight %}
+
+
+### Incoming packets
+
+When a packet arrives, if the receive ring buffer is not full, it is written to 
+ring buffer using DMA, then IRQ is fired.<br>
+The IRQ handler is called:
+
+{% highlight c %}
+static irqreturn_t rtl8169_interrupt(int irq, void *dev_instance)
+{
+...
+  rtl_irq_disable(tp);
+  napi_schedule(&tp->napi);
+...
+}
+{% endhighlight %}
+
+The IRQ handler is very simple and fast, because when it runs other interrupts are blocked.
+The packet processing is not executed in this context but, as we see, it is scheduled to be executed by softirq.
+IRQ handle simply disable further NAPI irq, and schedule execution (`napi_schedule`, in `net/core/dev.c`):
+
+{% highlight c %}
+void __napi_schedule(struct napi_struct *n)
+{
+	unsigned long flags;
+
+	local_irq_save(flags);
+	____napi_schedule(this_cpu_ptr(&softnet_data), n);
+	local_irq_restore(flags);
+}
+
+/* Called with irq disabled */
+static inline void ____napi_schedule(struct softnet_data *sd,
+				     struct napi_struct *napi)
+{
+	list_add_tail(&napi->poll_list, &sd->poll_list);
+	__raise_softirq_irqoff(NET_RX_SOFTIRQ);
+}
+
+// from net/core/dev.c
+struct softnet_data {
+	struct list_head	poll_list;
+...
+}
+
+{% endhighlight %}
+
+<b>`napi_schedule()` retrive the `struct softnet_data` associated to the current cpu,
+add the `napi_struct` associated to irq to the `softnet_data` linked list and raise softirq `NET_RX_SOFTIRQ`;</b>
+those actions are the core of the NAPI system: the softirq will cycle on `struct softnet_data` and will grab
+all `napi_struct` it will find on that list.
