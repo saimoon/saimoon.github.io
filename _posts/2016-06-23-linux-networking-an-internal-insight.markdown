@@ -289,7 +289,8 @@ static int rtl_open(struct net_device *dev)
 
 ### Incoming packets
 
-When a packet arrives, if the receive ring buffer is not full, it is written to 
+#### IRQ handler
+When a packet arrives, if the receive ring buffer is not full, it is written to
 ring buffer using DMA, then IRQ is fired.<br>
 The IRQ handler is called:
 
@@ -305,7 +306,7 @@ static irqreturn_t rtl8169_interrupt(int irq, void *dev_instance)
 
 The IRQ handler is very simple and fast, because when it runs other interrupts are blocked.
 The packet processing is not executed in this context but, as we see, it is scheduled to be executed by softirq.
-IRQ handle simply disable further NAPI irq, and schedule execution (`napi_schedule`, in `net/core/dev.c`):
+IRQ handler simply disable further NAPI irq, and schedule execution (`napi_schedule`, in `net/core/dev.c`):
 
 {% highlight c %}
 void __napi_schedule(struct napi_struct *n)
@@ -334,6 +335,10 @@ struct softnet_data {
 {% endhighlight %}
 
 <b>`napi_schedule()` retrive the `struct softnet_data` associated to the current cpu,
-add the `napi_struct` associated to irq to the `softnet_data` linked list and raise softirq `NET_RX_SOFTIRQ`;</b>
+add the `napi_struct` associated to irq to the `softnet_data` linked list and raise softirq `NET_RX_SOFTIRQ`;</b><br>
 those actions are the core of the NAPI system: the softirq will cycle on `struct softnet_data` and will grab
-all `napi_struct` it will find on that list.
+all `napi_struct` it will find on that list.<br>
+It is important to notice the IRQ handler wakes up the NAPI softirq process on the same CPU as the IRQ handler.<br>
+
+
+#### Softirq handler
